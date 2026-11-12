@@ -2,7 +2,7 @@
 
 **Author:** Pavankalyan Adepu
 **Reference:** https://github.com/SyedRoshanAli/WeatherFlow-DataEngineering
-**Sources read:** README.md, IMPLEMENTATION.md (the `weather_flow/` folder tree should be checked against the README, see note at the end)
+**Sources read:** README.md, IMPLEMENTATION.md and the `weather_flow/` folder tree
 
 ## What each tool does (one sentence each)
 
@@ -30,13 +30,13 @@
 
 **Problems and risks.**
 
-1. **Secret in the docs.** README.md (Prerequisites, the `.env` example, the "Test Weather API" command, Data Sources) and IMPLEMENTATION.md all print the same WeatherAPI key (`1f5800c8…`). Once pushed, it lives in git history. The docs should show a placeholder such as `your_weatherapi_key`, commit a `.env.example`, ignore `.env`, and the key should be rotated. The Airflow login `admin/admin` is also documented.
+1. **Secret in the docs.** README.md (Prerequisites, the `.env` example, the "Test Weather API" command, Data Sources) and IMPLEMENTATION.md all print the same WeatherAPI key (`1f5800c8...`). Once pushed, it lives in git history. The repo already contains `.env.template`, yet the docs print the real key instead of pointing to it. The key should be rotated and the docs should show a placeholder. The Airflow login `admin/admin` is also documented.
 
-2. **Docs disagree with themselves.** README says PostgreSQL is only the "Database for Airflow metadata", while IMPLEMENTATION.md says storage is "File-based storage with a data lake structure", so "where does the data live?" takes detective work. README says the dashboard is Flask on port 8051, then tells readers to run `streamlit_dashboard.py` on port 8501. IMPLEMENTATION.md says `python setup.py --all`, but neither `setup.py` nor `streamlit_dashboard.py` appears in README's project tree.
+2. **Docs disagree with themselves and with the repo.** README says PostgreSQL is only the "Database for Airflow metadata", while IMPLEMENTATION.md says storage is "File-based storage with a data lake structure". README says the dashboard is Flask on port 8051, then tells readers to run `streamlit_dashboard.py` on port 8501. The README tree also does not match the real `weather_flow/` folder: `README.md` is listed inside it but sits at the repo root, and `docs/`, `.env.template`, `run_pipeline.py`, `run_standalone.sh`, `setup.py` and `streamlit_dashboard.py` exist but are missing from the tree.
 
-3. **Weak testing and monitoring.** README's tree lists `tests/`, but its verification section is manual `docker exec` commands, and one of them creates a `weather_test` table inside Airflow's own metadata database. A repo-root `test_weather_api.py` and `check_docker_logs.py` suggest ad-hoc checks. Nothing alerts anyone when a run fails; IMPLEMENTATION.md lists "proper monitoring and alerting" only as future work.
+3. **Weak testing and monitoring.** README's verification section is manual `docker exec` commands, and one creates a `weather_test` table inside Airflow's own metadata database. Loose scripts such as `test_weather_api.py` and `check_docker_logs.py` sit at the repo root. Nothing alerts anyone when a run fails; IMPLEMENTATION.md lists "proper monitoring and alerting" only as future work.
 
-**Essential vs overkill (5 cities, hourly).** That is 5 × 24 = 120 records a day: tiny, and not a stream. Essential: a scheduled Python fetch with retries, one durable store (PostgreSQL or plain Parquet/CSV), secrets in `.env`, a simple dashboard, and Docker for repeatability. Airflow is borderline: useful for retries and run history, but cron would work, so keep it only if learning orchestration is the goal. Overkill: Kafka (no multiple consumers, no replay need, and hourly data does not need continuous transport) and Spark (pandas or SQL handles this on one laptop; Zookeeper and Spark workers add memory use and failure points).
+**Essential vs overkill (5 cities, hourly).** That is 5 x 24 = 120 records a day: tiny, and not a stream. Essential: a scheduled Python fetch with retries, one durable store (PostgreSQL or plain Parquet/CSV), secrets in `.env`, a simple dashboard, and Docker for repeatability. Airflow is borderline: useful for retries and run history, but cron would work. Overkill: Kafka (no multiple consumers, no replay need, hourly data does not need continuous transport) and Spark (pandas or SQL handles this on one laptop; Zookeeper and Spark workers add memory use and failure points).
 
 ## Check your understanding
 
@@ -45,7 +45,3 @@ Kafka is like a post office sorting room: senders drop off messages, and receive
 
 **Why might a team choose ELT instead of ETL with a cloud warehouse?**
 Cloud warehouses have cheap storage and powerful compute, so it is simpler to load raw data first and transform it inside the warehouse with SQL. The raw data is kept, so transformations can be changed and re-run later without re-extracting from the source.
-
-## Note on verification
-
-Diagram edges and the "what it does" column are based on the README and IMPLEMENTATION.md. Compare the README folder tree with the real `weather_flow/` tree on GitHub and add any mismatch you find to problem 2.
