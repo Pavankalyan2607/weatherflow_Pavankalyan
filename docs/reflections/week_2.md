@@ -28,3 +28,5 @@
 ## What I would do differently
 - Write the tests earlier, together with each task, instead of at the end.
 - Add the code review step earlier in the week so there is time to respond to comments.
+## Code review
+My Task 2.6 PR is open and I have requested a review from my partner. I have not received comments yet, so I have not been able to respond to them. I will reply to every comment and merge once the review is done.
