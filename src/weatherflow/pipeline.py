@@ -26,6 +26,6 @@ def run() -> int:
     ingested_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     df = transform(raw, load_wmo_codes(), ingested_at)
     write_parquet(df, Path(cfg["paths"]["processed_dir"]))
-    rows = load(df, Path(cfg["paths"]["database"]))
+    rows = load(df, Path(cfg["paths"]["database"]), cfg)
     logger.info("Pipeline finished: %d rows in %.1fs", rows, time.perf_counter() - start)
     return rows
