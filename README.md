@@ -29,3 +29,16 @@ WeatherFlow is a data engineering project that builds a repeatable pipeline to c
    ```
    pip install -r requirements.txt
    ```
+   ## How to run the pipeline
+
+Make sure the virtual environment is active (`(.venv)` shows in the terminal prompt), then run:
+
+    python etl_v1.py
+
+This runs Extract, Transform and Load in one command. It calls Open-Meteo for 5 UK cities, saves the raw JSON under `data/raw/<date>/`, cleans the data and loads it into `weather.db` (table `weather_hourly`). Re-running is safe: rows are replaced by `(city, observed_at)`, so there are no duplicates.
+
+Example output:
+
+    Loaded 240 rows
+
+Example queries are in `sql/week1_queries.sql`.
