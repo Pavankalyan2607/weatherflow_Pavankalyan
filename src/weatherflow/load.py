@@ -55,8 +55,8 @@ def build_dim_date(start, end) -> list[tuple]:
     return [
         (
             int(d.strftime("%Y%m%d")), d.strftime("%Y-%m-%d"), d.year, d.quarter,
-            d.month, d.month_name(), d.day, d.day_name(), d.dayofweek + 1,
-            int(d.dayofweek >= 5),
+            d.month, d.month_name(), d.day, d.day_name(), d.day_of_week + 1,
+            int(d.day_of_week >= 5),
         )
         for d in days
     ]

@@ -43,3 +43,21 @@ Example output:
     Loaded 240 rows
 
 Example queries are in `sql/week1_queries.sql`.
+
+
+## Running the tests
+
+Install dev dependencies and the package in editable mode, then run:
+
+    pip install -e .
+    pip install pytest pytest-cov
+    pytest -v --cov=src --cov-report=term-missing
+
+No test calls the real API: HTTP requests are mocked and a trimmed Open-Meteo
+response is stored in `tests/fixtures/open_meteo_london.json`.
+
+Latest result: 39 passed.
+
+    Name                           Stmts   Miss  Cover
+    ----------------------------------------------------
+    TOTAL                            323     86    73%
