@@ -56,8 +56,34 @@ Install dev dependencies and the package in editable mode, then run:
 No test calls the real API: HTTP requests are mocked and a trimmed Open-Meteo
 response is stored in `tests/fixtures/open_meteo_london.json`.
 
-Latest result: 39 passed.
+Latest result: 64 passed.
 
     Name                           Stmts   Miss  Cover
     ----------------------------------------------------
-    TOTAL                            323     86    73%
+    TOTAL                            444     44    90%
+
+    ## Backfill and incremental loads
+
+    python -m weatherflow run                       # incremental: only what is new, plus the forecast
+    python -m weatherflow backfill --days 30        # 30 days ending 5 days ago
+    python -m weatherflow backfill --start-date 2026-10-01 --end-date 2026-10-31
+
+- `run` reads a high-water mark per city: the latest loaded hour that has already
+  happened (`observed_at_utc <= now`, source `open_meteo_forecast`). It requests from
+  2 hours before the mark to the end of today, so forecast hours are refreshed on
+  every run. With no data yet it falls back to `past_days=1`.
+- `backfill` uses the archive API, which lags real time by about 5 days, so the
+  default end date is today minus 5 days. It fetches 7-day chunks per city with a
+  1 second pause, source `open_meteo_archive`.
+- Both commands use the same transform, validate and load code. Loads are upserts,
+  so re-running either command does not change row counts.
+
+## Source layout
+
+- `extract.py`: API calls, retries, raw JSON landing, date chunks
+- `transform.py`: cleaning, derived metrics
+- `validate.py`: data quality checks and quarantine
+- `load.py`: star schema upserts (SQLite) and Parquet
+- `watermark.py`: high-water mark and incremental window logic
+- `pipeline.py`: `run` and `backfill`
+- `__main__.py`: command line

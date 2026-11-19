@@ -12,7 +12,9 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 SCHEMA_FILE = Path(__file__).resolve().parents[2] / "sql" / "schema.sql"
-SOURCE = "open-meteo"
+SOURCE_FORECAST = "open_meteo_forecast"
+SOURCE_ARCHIVE = "open_meteo_archive"
+SOURCE = SOURCE_FORECAST  # default source for the normal (incremental) run
 DEFAULT_COUNTRY = "United Kingdom"
 
 FACT_COLUMNS = [
@@ -23,6 +25,8 @@ FACT_COLUMNS = [
     "outdoor_work_risk", "source", "ingested_at_utc",
 ]
 FACT_KEY = ["city_id", "observed_at_utc", "source"]
+CITY_IDX = FACT_COLUMNS.index("city_id")
+TS_IDX = FACT_COLUMNS.index("observed_at_utc")
 
 _updates = ", ".join(f"{c} = excluded.{c}" for c in FACT_COLUMNS if c not in FACT_KEY)
 FACT_UPSERT_SQL = (
@@ -62,7 +66,9 @@ def build_dim_date(start, end) -> list[tuple]:
     ]
 
 
-def to_fact_rows(df: pd.DataFrame, city_ids: dict[str, int]) -> list[tuple]:
+def to_fact_rows(
+    df: pd.DataFrame, city_ids: dict[str, int], source: str = SOURCE
+) -> list[tuple]:
     """Turn the transformed frame into rows for fact_weather_hourly."""
     fact = df.copy()
     fact["city_id"] = fact["city"].map(city_ids)
@@ -73,12 +79,12 @@ def to_fact_rows(df: pd.DataFrame, city_ids: dict[str, int]) -> list[tuple]:
     fact["hour_local"] = fact["observed_at_local"].dt.hour
     fact["observed_at_utc"] = fact["observed_at_utc"].dt.strftime("%Y-%m-%dT%H:%M")
     fact["is_daylight"] = fact["is_daylight"].astype(int)
-    fact["source"] = SOURCE
+    fact["source"] = source
     out = fact[FACT_COLUMNS].astype(object)
     return list(out.where(out.notna(), None).itertuples(index=False, name=None))
 
 
-def load(df: pd.DataFrame, db_path: Path, cfg: dict) -> int:
+def load(df: pd.DataFrame, db_path: Path, cfg: dict, source: str = SOURCE) -> int:
     """Upsert dimensions and facts in ONE transaction. Returns fact rows written."""
     db_path = Path(db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -94,9 +100,20 @@ def load(df: pd.DataFrame, db_path: Path, cfg: dict) -> int:
             conn.executemany(CITY_UPSERT_SQL, cities)
             conn.executemany(DATE_INSERT_SQL, dates)
             city_ids = dict(conn.execute("SELECT city_name, city_id FROM dim_city"))
-            rows = to_fact_rows(df, city_ids)
+            rows = to_fact_rows(df, city_ids, source)
+            existing = set(
+                conn.execute(
+                    "SELECT city_id, observed_at_utc FROM fact_weather_hourly "
+                    "WHERE source = ?",
+                    (source,),
+                )
+            )
+            updated = sum((r[CITY_IDX], r[TS_IDX]) in existing for r in rows)
             conn.executemany(FACT_UPSERT_SQL, rows)
-    logger.info("Loaded %d fact rows into %s", len(rows), db_path)
+    logger.info(
+        "Loaded %d fact rows (%d new, %d updated) into %s",
+        len(rows), len(rows) - updated, updated, db_path,
+    )
     return len(rows)
 
 
