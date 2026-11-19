@@ -28,3 +28,14 @@ dim_date:
   start: 2025-01-01
   end: 2027-12-31
   
+data_quality:
+  temperature_c:
+    min: -30
+    max: 45
+  humidity_pct:
+    min: 0
+    max: 100
+  feels_like_max_diff_c: 15
+  max_staleness_hours: 3
+  min_hours_per_city: 24
+  report_dir: docs/dq_reports
